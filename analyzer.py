@@ -131,26 +131,76 @@ class JavaScriptAnalyzer:
             (r'api[_-]?url\s*[:=]\s*["\']([^"\']+)["\']', 'API URL Variable'),
         ]
         
-        # Parameter patterns - including URL query parameters
+        # Parameter patterns - comprehensive detection of ALL parameters
         self.parameter_patterns = [
-            # URL query parameters: ?key=value, &email=value, ?param=value&other=value
-            (r'["\']([^"\']*[?&](key|api[_-]?key|token|secret|password|passwd|pwd|email|mail|username|user|file|id|uid|session|auth|access[_-]?token|refresh[_-]?token)\s*=\s*[^"\'&\s]+)["\']', 'URL Query Parameter (Sensitive)'),
+            # URL query parameters - ALL parameters (not just sensitive ones)
+            # Pattern: ?param=value or &param=value
             (r'["\']([^"\']*[?&](\w+)\s*=\s*[^"\'&\s]+)["\']', 'URL Query Parameter'),
-            (r'[?&](key|api[_-]?key|token|secret|password|passwd|pwd|email|mail|username|user|file|id|uid|session|auth|access[_-]?token|refresh[_-]?token)\s*=\s*([^&\s"\']+)', 'Query Parameter (Sensitive)'),
             (r'[?&](\w+)\s*=\s*([^&\s"\']+)', 'Query Parameter'),
             
-            # URL patterns with parameters
+            # Multiple parameters in URL: ?param1=value1&param2=value2
+            (r'["\']([^"\']*[?&][\w\-]+\s*=\s*[^"\'&\s]+(?:\s*&\s*[\w\-]+\s*=\s*[^"\'&\s]+)+)["\']', 'URL with Multiple Parameters'),
+            
+            # URL patterns with any parameters
             (r'["\']([^"\']+[?&][^"\']+)["\']', 'URL with Query Parameters'),
             
-            # Function parameters
-            (r'function\s+\w+\s*\(([^)]+)\)', 'Function Parameters'),
+            # Function parameters - ALL function definitions
+            (r'function\s+(\w+)\s*\(([^)]+)\)', 'Function Parameters'),
+            (r'function\s*\(([^)]+)\)', 'Anonymous Function Parameters'),
+            (r'(\w+)\s*[:=]\s*function\s*\(([^)]+)\)', 'Function Expression Parameters'),
+            (r'\(([^)]+)\)\s*=>', 'Arrow Function Parameters'),
+            (r'const\s+\w+\s*=\s*\(([^)]+)\)\s*=>', 'Arrow Function (const)'),
+            (r'let\s+\w+\s*=\s*\(([^)]+)\)\s*=>', 'Arrow Function (let)'),
+            (r'var\s+\w+\s*=\s*\(([^)]+)\)\s*=>', 'Arrow Function (var)'),
+            
+            # Method parameters
+            (r'\.(\w+)\s*\(([^)]+)\)', 'Method Call Parameters'),
+            
+            # URLSearchParams - extract all parameters
             (r'URLSearchParams\s*\([^)]*\)', 'URL Parameters Object'),
-            (r'\.(get|post|put|delete)\s*\([^,]+,\s*\{([^}]+)\}', 'Request Parameters'),
+            (r'new\s+URLSearchParams\s*\(([^)]+)\)', 'URLSearchParams Constructor'),
+            (r'\.get\s*\(["\']([^"\']+)["\']', 'URLSearchParams.get()'),
+            (r'\.getAll\s*\(["\']([^"\']+)["\']', 'URLSearchParams.getAll()'),
+            (r'\.has\s*\(["\']([^"\']+)["\']', 'URLSearchParams.has()'),
+            
+            # Request parameters - ALL HTTP methods
+            (r'\.(get|post|put|delete|patch|head|options)\s*\([^,]+,\s*\{([^}]+)\}', 'Request Parameters'),
+            (r'\.(get|post|put|delete|patch)\s*\([^,]+,\s*([^,)]+)\)', 'Request Parameters (short)'),
+            (r'fetch\s*\([^,]+,\s*\{([^}]+)\}', 'Fetch Request Parameters'),
+            (r'axios\s*\(\s*\{([^}]+)\}', 'Axios Request Parameters'),
+            
+            # URL constructor with parameters
             (r'new\s+URL\s*\([^,]+,\s*["\']([^"\']+)["\']', 'URL Constructor with Parameters'),
             
-            # Location/search patterns
+            # Location/search patterns - ALL location parameters
             (r'location\.(search|href)\s*[=:]\s*["\']([^"\']*[?&][^"\']+)["\']', 'Location with Parameters'),
             (r'window\.location\.(search|href)\s*[=:]\s*["\']([^"\']*[?&][^"\']+)["\']', 'Window Location with Parameters'),
+            (r'document\.location\.(search|href)\s*[=:]\s*["\']([^"\']*[?&][^"\']+)["\']', 'Document Location with Parameters'),
+            
+            # Template literals with parameters
+            (r'`([^`]*[?&]\w+\s*=\s*[^`&]+)`', 'Template Literal with Parameters'),
+            
+            # Object/JSON parameters
+            (r'\{([^}]*:\s*[^,}]+(?:,\s*[^}]*:\s*[^,}]+)*)\}', 'Object Parameters'),
+            
+            # Destructuring parameters
+            (r'const\s+\{([^}]+)\}\s*=', 'Destructuring Parameters (const)'),
+            (r'let\s+\{([^}]+)\}\s*=', 'Destructuring Parameters (let)'),
+            (r'var\s+\{([^}]+)\}\s*=', 'Destructuring Parameters (var)'),
+            (r'function\s+\w+\s*\(\{([^}]+)\}\)', 'Function with Destructuring'),
+            
+            # Array destructuring
+            (r'const\s+\[([^\]]+)\]\s*=', 'Array Destructuring (const)'),
+            (r'let\s+\[([^\]]+)\]\s*=', 'Array Destructuring (let)'),
+            
+            # Event handler parameters
+            (r'\.(on\w+)\s*=\s*function\s*\(([^)]+)\)', 'Event Handler Parameters'),
+            (r'\.addEventListener\s*\(["\']([^"\']+)["\'],\s*function\s*\(([^)]+)\)', 'EventListener Parameters'),
+            (r'\.addEventListener\s*\(["\']([^"\']+)["\'],\s*\(([^)]+)\)\s*=>', 'EventListener Arrow Parameters'),
+            
+            # Callback parameters
+            (r'\.(then|catch|finally)\s*\(([^)]+)\)', 'Promise Callback Parameters'),
+            (r'\.(map|filter|reduce|forEach|find)\s*\(([^)]+)\)', 'Array Method Parameters'),
         ]
         
         # Path and directory patterns
@@ -399,14 +449,54 @@ class JavaScriptAnalyzer:
                                 # Extract the parameter part
                                 param_part = match.group(1) if match.lastindex >= 1 else full_match
                                 if '=' in param_part:
-                                    parts = param_part.split('=', 1)
-                                    if len(parts) == 2:
-                                        # Remove ? or & from param name
-                                        param_name = parts[0].lstrip('?&').strip()
-                                        param_value = parts[1].strip()
-                                        param_text = f"{param_name}={param_value[:50]}"
-                            else:
+                                    # Handle multiple parameters: param1=val1&param2=val2
+                                    if '&' in param_part:
+                                        # Extract first parameter for display
+                                        first_param = param_part.split('&')[0]
+                                        if '=' in first_param:
+                                            parts = first_param.split('=', 1)
+                                            if len(parts) == 2:
+                                                param_name = parts[0].lstrip('?&').strip()
+                                                param_value = parts[1].strip()
+                                                param_text = f"{param_name}={param_value[:50]}..."
+                                    else:
+                                        parts = param_part.split('=', 1)
+                                        if len(parts) == 2:
+                                            # Remove ? or & from param name
+                                            param_name = parts[0].lstrip('?&').strip()
+                                            param_value = parts[1].strip()
+                                            param_text = f"{param_name}={param_value[:50]}"
+                            # For function parameters
+                            elif '(' in full_match and ')' in full_match:
+                                # Extract parameters from function definition
+                                param_text = match.group(2) if len(match.groups()) > 1 and match.lastindex >= 2 else (match.group(1) if match.lastindex >= 1 else full_match)
+                                # Try to extract first parameter name
+                                params_str = param_text.split(',')[0] if ',' in param_text else param_text
+                                if '=' in params_str:
+                                    # Default parameter value
+                                    param_name = params_str.split('=')[0].strip()
+                                elif ':' in params_str:
+                                    # Type annotation or object property
+                                    param_name = params_str.split(':')[0].strip()
+                                else:
+                                    param_name = params_str.strip()
+                            # For object/destructuring parameters
+                            elif '{' in full_match:
                                 param_text = match.group(1) if match.lastindex >= 1 else full_match
+                                # Extract first property name
+                                if ':' in param_text:
+                                    param_name = param_text.split(':')[0].strip()
+                                else:
+                                    param_name = param_text.split(',')[0].strip() if ',' in param_text else param_text.strip()
+                            else:
+                                param_text = match.group(1) if match.lastindex >= 1 else (match.group(2) if len(match.groups()) > 1 and match.lastindex >= 2 else full_match)
+                                # Try to extract parameter name from various patterns
+                                if '=' in param_text:
+                                    param_name = param_text.split('=')[0].strip()
+                                elif ':' in param_text:
+                                    param_name = param_text.split(':')[0].strip()
+                                else:
+                                    param_name = param_text.split(',')[0].strip() if ',' in param_text else param_text.strip()
                         
                         # Get line content
                         line_content = lines[line_num - 1].strip() if line_num <= len(lines) else ""
