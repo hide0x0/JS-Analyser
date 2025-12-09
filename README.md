@@ -8,7 +8,9 @@ A powerful, modern web application for analyzing JavaScript files to detect sens
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
 ## ✨ Features
+
 <img width="1422" height="951" alt="js" src="https://github.com/user-attachments/assets/6add9554-ef6e-4a02-acc6-892f15ae6165" />
+
 ### 🔍 Security Detection
 - **API Keys**: Detects AWS, Google, GitHub, Stripe, PayPal, Slack, Firebase, JWT tokens, and more
 - **Credentials**: Finds hardcoded passwords, usernames, database credentials
