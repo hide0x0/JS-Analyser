@@ -2,6 +2,8 @@
 
 A powerful, modern web application for analyzing JavaScript files to detect sensitive data, security vulnerabilities, and potential attack vectors. Perfect for bug bounty hunters, security researchers, and developers.
 
+<iframe width="560" height="315" src="https://www.youtube.com/embed/fCmVnnlsID4?si=2p-3Hz9PxmckRiwU" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
 ![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
 ![Flask](https://img.shields.io/badge/Flask-3.0+-green.svg)
 
